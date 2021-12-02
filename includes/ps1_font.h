@@ -1,11 +1,13 @@
 typedef struct {
-    unsigned char magic[2];
-    unsigned char mode;
-    unsigned char char_size;
-}ps1_header;
-
-#define PS1_MAGIC0 0x36
-#define PS1_MAGIC1 0x04
+    uint32_t magic;         /* magic bytes to identify PSF */
+    uint32_t version;       /* zero */
+    uint32_t headersize;    /* offset of bitmaps in file, 32 */
+    uint32_t flags;         /* 0 if there's no unicode table */
+    uint32_t numglyph;      /* number of glyphs */
+    uint32_t bytesperglyph; /* size of each glyph */
+    uint32_t height;        /* height in pixels */
+    uint32_t width;         /* width in pixels */
+} ps1_header;
 
 typedef struct {
     ps1_header* psf1_header;

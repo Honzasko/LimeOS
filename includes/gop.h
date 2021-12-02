@@ -1,4 +1,4 @@
-ps1_font* font;
+ps1_font font;
 
 typedef struct Framebuffer 
 {

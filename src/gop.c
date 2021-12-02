@@ -17,12 +17,11 @@ void InitializeGOP(Framebuffer* framebuffer)
 
 void PrintChar(char _ascii,unsigned int xOff,unsigned int yOff)
 {
-  unsigned int* pixPtr = (unsigned int*)buffer.framebuffer_addr;
-   char* fontPtr = font->glyphs + (_ascii * 255);
+   char* fontPtr = font.psf1_header->headersize + (_ascii * font.psf1_header->bytesperglyph);
     for (unsigned long y = yOff; y < yOff + 16; y++){
         for (unsigned long x = xOff; x < xOff + 8; x++){
             if ((*fontPtr & (0b10000000 >> (x - xOff))) > 0){
-                    *(unsigned int*)(pixPtr + x + (y * 4)) = 0xFFFFFFFF;
+                    *(uint32_t*)((uint64_t)buffer.framebuffer_addr + (x * 4) + (y * (buffer.pitch / 4) * 4)) = 0xFFFFFFFF;
                 }
 
         }

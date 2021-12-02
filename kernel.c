@@ -25,15 +25,24 @@ int strcmp(char* str1,char* str2,int len)
 }
 
 void _start(stivale_struct_t* stivale) {
-        //loading font
-    font = (ps1_font*)stivale->modules;
+        //loading font   
+    font = *(ps1_font*)stivale->modules;
     int font_loaded = 0;
-    char header_magic[2] = {PS1_MAGIC0,PS1_MAGIC1};
-    if(strcmp(font->psf1_header->magic,header_magic,2) == 1)
+    if(font.psf1_header->magic == (uint32_t)0x864ab572)
     {
-        font->psf1_header->char_size = 255;
+      if(font.psf1_header->version == 2)
+      {
         font_loaded = 1;
+        for(unsigned long y = 0;y < stivale->framebuffer_height;y++)
+        {
+          for(unsigned long x = 0;x < stivale->framebuffer_width;x++)
+          {
+            *(uint32_t*)((uint64_t)stivale->framebuffer_addr + (x * 4) + (y * (stivale->framebuffer_pitch / 4) * 4)) = 0xFFFFFFFF;
+          }
+        }
+      }
     }
+
     
     Framebuffer framebuffer;//creates framebuffer structure
     framebuffer.framebuffer_addr = stivale->framebuffer_addr;//get framebuffer address from stivale
@@ -41,10 +50,10 @@ void _start(stivale_struct_t* stivale) {
     framebuffer.width = stivale->framebuffer_width;
     framebuffer.pitch = stivale->framebuffer_pitch;
     InitializeGOP(&framebuffer);
-    if(font_loaded == 1)
+    /*if(font_loaded == 1)
     {
       PrintChar('H',10,10);
-    }
+    }*/
     asm("cli");
     asm ("hlt");
 }
