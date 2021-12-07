@@ -1,14 +1,56 @@
-#include "includes/stivale.h"
-uint8_t stack[0x4000];
-__attribute__((used, section(".stivalehdr"))) stivale_header_t header = {.stack=&stack[0x4000], .flags=1<<0|1<<3|1<<4};
+#include "includes/stivale2.h"
+
+static uint8_t stack[0x4000];
+
+static struct stivale2_header_tag_terminal terminal = {
+  .tag = {
+    .identifier = STIVALE2_HEADER_TAG_TERMINAL_ID,
+    .next = 0
+  },
+  .flags = 0
+};
+
+static struct stivale2_struct_tag_framebuffer buff = {
+  .tag = {
+    .identifier = STIVALE2_HEADER_TAG_FRAMEBUFFER_ID,
+    .next = (uint64_t)&terminal
+  },
+  .framebuffer_height = 0,
+  .framebuffer_width = 0,
+  .framebuffer_bpp = 0
+};
+
+__attribute__((section(".stivale2hdr"), used)) 
+static struct stivale2_header header = {
+  .entry_point = 0,
+  .stack = (uint64_t)&stack + sizeof(stack),
+  .flags = (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4),
+  .tags = (uint64_t)&buff
+};
 
 #include "includes/basics.h"
-#include "includes/memory.h"
-#include "includes/ps1_font.h"
-#include "includes/gop.h"
-#include "includes/acpi.h"
-#include "includes/pci.h"
 #include "includes/io.h"
+#include "includes/pci.h"
+
+void *stivale2_get_tag(struct stivale2_struct *stivale2_struct, uint64_t id) {
+    struct stivale2_tag *current_tag = (void *)stivale2_struct->tags;
+    for (;;) {
+        // If the tag pointer is NULL (end of linked list), we did not find
+        // the tag. Return NULL to signal this.
+        if (current_tag == NULL) {
+            return NULL;
+        }
+ 
+        // Check whether the identifier matches. If it does, return a pointer
+        // to the matching tag.
+        if (current_tag->identifier == id) {
+            return current_tag;
+        }
+ 
+        // Get a pointer to the next tag in the linked list and repeat.
+        current_tag = (void *)current_tag->next;
+    }
+}
 
 int strcmp(char* str1,char* str2,int len)
 {
@@ -24,36 +66,29 @@ int strcmp(char* str1,char* str2,int len)
   return status;
 }
 
-void _start(stivale_struct_t* stivale) {
-        //loading font   
-    font = *(ps1_font*)stivale->modules;
-    int font_loaded = 0;
-    if(font.psf1_header->magic == (uint32_t)0x864ab572)
+void _start(struct stivale2_struct* stivale2) {
+    struct stivale2_struct_tag_terminal *term_str_tag;
+    term_str_tag = stivale2_get_tag(stivale2, STIVALE2_STRUCT_TAG_TERMINAL_ID);
+    if(term_str_tag == NULL)
     {
-      if(font.psf1_header->version == 2)
+      asm("cli");
+      asm("hlt");
+    }
+    void *term_write_ptr = (void *)term_str_tag->term_write;
+    void (*term_write)(const char *string, size_t length) = term_write_ptr;
+    struct stivale2_struct_tag_rsdp *rsdp_tag;
+    rsdp_tag = stivale2_get_tag(stivale2, STIVALE2_STRUCT_TAG_RSDP_ID);
+    if(rsdp_tag != NULL)
+    {
+      struct ACPI_RSDP* rsdp = (ACPI_RSDP*)rsdp_tag->rsdp;
+      ACPI_SDTHeader* xsdt = (ACPI_SDTHeader*)rsdp->xsdt_address;
+      MCFGHeader* mcfg = (MCFGHeader*)ACPI_FindTable(xsdt,(char*)"MCFG");
+      if(mcfg != 0)
       {
-        font_loaded = 1;
-        for(unsigned long y = 0;y < stivale->framebuffer_height;y++)
-        {
-          for(unsigned long x = 0;x < stivale->framebuffer_width;x++)
-          {
-            *(uint32_t*)((uint64_t)stivale->framebuffer_addr + (x * 4) + (y * (stivale->framebuffer_pitch / 4) * 4)) = 0xFFFFFFFF;
-          }
-        }
+        EnumeratePCI(mcfg,term_write);
       }
     }
 
-    
-    Framebuffer framebuffer;//creates framebuffer structure
-    framebuffer.framebuffer_addr = stivale->framebuffer_addr;//get framebuffer address from stivale
-    framebuffer.height = stivale->framebuffer_height;//get height of screen from stivale
-    framebuffer.width = stivale->framebuffer_width;
-    framebuffer.pitch = stivale->framebuffer_pitch;
-    InitializeGOP(&framebuffer);
-    /*if(font_loaded == 1)
-    {
-      PrintChar('H',10,10);
-    }*/
     asm("cli");
     asm ("hlt");
 }

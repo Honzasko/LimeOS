@@ -1,21 +1,23 @@
-typedef struct PCI_Device 
-{
-    uint32_t bus;
-    uint32_t device;
-}PCI_Device_t;
+#pragma once
+#include <stdint.h>
+#include <stddef.h>
+#include "acpi.h"
 
-typedef struct PCI_DeviceInfo
-{
-    uint16_t vendor;
-    uint16_t device;
-    uint16_t class_code;
-    uint16_t subclass;
-    
-}PCI_DeviceInfo_t;
 
-PCI_Device_t pci_devices[25];
-uint8_t num_devices;
+typedef struct DeviceHeader {
+uint16_t VendorID;
+uint16_t DeviceID;
+uint16_t Command;
+uint16_t Status;
+uint8_t RevisionID;
+uint8_t ProgIf;
+uint8_t Subclass;
+uint8_t Class;
+uint8_t CacheLineSize;
+uint8_t LatencyTimer;
+uint8_t HeaderType;
+uint8_t BIST;
 
-void PCI_InitDevices();
+}DeviceHeader;
 
-PCI_DeviceInfo_t PCI_GetDeviceInfo(uint32_t bus,uint32_t dev);
+void EnumeratePCI(MCFGHeader* mfghdr,void print(const char*,uint64_t length));

@@ -1,3 +1,6 @@
+#pragma once
+#include <stdint.h>
+
 typedef struct ACPI_RSDP 
 {
     uint8_t signature[8];
@@ -32,3 +35,13 @@ typedef struct MCFGHeader
 
 }MCFGHeader;
 
+typedef struct DevConfig 
+{
+    uint64_t BaseAddress;
+    uint16_t PCISegGroup;
+    uint8_t start_bus;
+    uint8_t end_bus;
+    uint32_t reserved;
+}DevConfig;
+
+void* ACPI_FindTable(ACPI_SDTHeader* sdtheader,char* signature);
